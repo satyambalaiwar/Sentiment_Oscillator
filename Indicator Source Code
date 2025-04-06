@@ -1,0 +1,58 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © balaiwarsatyam
+
+//@version=6
+indicator("Sentiment Oscillator", overlay=false)
+
+sentiment_calculate() =>
+    
+    price_change = close - open
+    price_change_percent = (price_change / open) * 100
+    
+    // Volatility metrics
+    volatility = ta.stdev(close, 14)
+    atr = ta.atr(14)
+    
+    // Longer-term trend consideration
+    long_term_trend = close > ta.sma(close, 50)
+    
+    // Sentiment scoring with multiple factors
+    sentiment_score = 0.0
+    
+    // Price change percentage impact (more weight)
+    if (price_change_percent > 1)
+        sentiment_score += price_change_percent * 2
+    else if (price_change_percent < -1)
+        sentiment_score -= math.abs(price_change_percent) * 2
+    
+    // Volatility impact
+    volatility_factor = (atr / close) * 100
+    sentiment_score -= volatility_factor
+    
+    // Long-term trend consideration
+    sentiment_score += long_term_trend ? 10 : -10
+    
+    // Volume consideration
+    volume_change = volume > ta.sma(volume, 14)
+    sentiment_score += volume_change ? 5 : -5
+    
+    math.min(math.max(sentiment_score, -100), 100)
+
+// Calculate sentiment
+sentiment = sentiment_calculate()
+
+color sentiment_color = sentiment > 0 ? color.green : (sentiment < 0 ? color.red : color.gray)
+
+plot(sentiment, color=sentiment_color, linewidth=2, title="Enhanced Sentiment")
+
+bgcolor(sentiment > 0 ? color.new(color.green, 90) : (sentiment < 0 ? color.new(color.red, 90) : color.new(color.gray, 90)))
+
+hline(0, color=color.gray, linestyle=hline.style_dashed)
+hline(50, color=color.green, linestyle=hline.style_dashed)
+hline(-50, color=color.red, linestyle=hline.style_dashed)
+
+bullish_shift = ta.crossover(sentiment, 50)
+bearish_shift = ta.crossunder(sentiment, -50)
+
+alertcondition(bullish_shift, title="Bullish Sentiment Shift", message="Strong Bullish Sentiment Detected!")
+alertcondition(bearish_shift, title="Bearish Sentiment Shift", message="Strong Bearish Sentiment Detected!")
